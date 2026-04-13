@@ -16,7 +16,7 @@ function Get-CoreMetrics {
 }
 $global:AppMetrics = Get-CoreMetrics
 
-$AppVersion = "1.9.8"
+$AppVersion = "1.9.11"
 $ProcArch = if ([Environment]::Is64BitProcess) { "64-bit" } else { "32-bit" }
 $ScriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $NTwainDllPath = Join-Path $ScriptPath "NTwain.dll"
@@ -47,7 +47,7 @@ using System.Threading;
 using NTwain;
 using NTwain.Data;
 
-namespace PBTAPv198
+namespace PBTAPv1910
 {
     public static class ImageTools
     {
@@ -261,7 +261,7 @@ namespace PBTAPv198
 }
 "@
 
-if (-not ("PBTAPv198.ImageTools" -as [type])) {
+if (-not ("PBTAPv1910.ImageTools" -as [type])) {
     Add-Type -TypeDefinition $CSharpCode -ReferencedAssemblies "System.Drawing", $NTwainDllPath -ErrorAction Stop
 }
 
@@ -449,7 +449,7 @@ $global:lastSaveDirectory = ""
 function Save-Settings {
     $fmt = "JPG"; if($rdoPNG.Checked){$fmt="PNG"}elseif($rdoBMP.Checked){$fmt="BMP"}elseif($rdoTIF.Checked){$fmt="TIF"}
     $sm = "Color"; if($rdoGrayAcq.Checked){$sm="Gray"}
-    "[Settings]`r`nLastSource=$([PBTAPv198.TwainScanner]::SelectedSourceName)`r`nSaveFormat=$fmt`r`nScanMode=$sm`r`nLastSaveDir=$global:lastSaveDirectory" | Set-Content -Path $IniPath -Encoding utf8
+    "[Settings]`r`nLastSource=$([PBTAPv1910.TwainScanner]::SelectedSourceName)`r`nSaveFormat=$fmt`r`nScanMode=$sm`r`nLastSaveDir=$global:lastSaveDirectory" | Set-Content -Path $IniPath -Encoding utf8
 }
 
 function Load-Settings {
@@ -461,7 +461,7 @@ function Load-Settings {
             
             $ini = $data | ConvertFrom-StringData
             if ($ini.LastSource) { 
-                [PBTAPv198.TwainScanner]::SelectedSourceName = $ini.LastSource
+                [PBTAPv1910.TwainScanner]::SelectedSourceName = $ini.LastSource
                 $lblStatus.Text = "$($ini.LastSource)" 
             }
             if ($ini.SaveFormat) {
@@ -493,7 +493,7 @@ function Update-Preview {
         $sharp = [float]$trkSharpenSoften.Value
         $emb = [float]$trkEmboss.Value
 
-        $final = [PBTAPv198.ImageTools]::ApplyAdjustments($global:originalImage, $b, $c, $h, $sat, $gray, $neg, $sharp, $emb)
+        $final = [PBTAPv1910.ImageTools]::ApplyAdjustments($global:originalImage, $b, $c, $h, $sat, $gray, $neg, $sharp, $emb)
         if ($global:modifiedPreview -ne $null) { $global:modifiedPreview.Dispose() }
         $global:modifiedPreview = $final; $pictureBox.Image = $global:modifiedPreview
         $btnCompare.Enabled = $true
@@ -557,15 +557,15 @@ $btnScan.Add_Click({
         $btnScan.Enabled = $false; $lblStatus.Text = "Waiting..."; $form.Refresh()
         $tmp = Join-Path $env:TEMP "PBTAP_temp.png"; if (Test-Path $tmp) { Remove-Item $tmp }
         $isColorAcq = $rdoColorAcq.Checked
-        [PBTAPv198.TwainScanner]::AcquireAsync($NTwainDllPath, $form.Handle, $tmp, $isColorAcq)
-        while (-not [PBTAPv198.TwainScanner]::IsFinished) { Start-Sleep -Milliseconds 100; [System.Windows.Forms.Application]::DoEvents() }
+        [PBTAPv1910.TwainScanner]::AcquireAsync($NTwainDllPath, $form.Handle, $tmp, $isColorAcq)
+        while (-not [PBTAPv1910.TwainScanner]::IsFinished) { Start-Sleep -Milliseconds 100; [System.Windows.Forms.Application]::DoEvents() }
         if (Test-Path $tmp) {
             $fs = New-Object System.IO.FileStream($tmp, [System.IO.FileMode]::Open); $global:originalImage = [System.Drawing.Image]::FromStream($fs); $fs.Close()
             $trkBrightness.Value=0;$trkContrast.Value=10;$trkHue.Value=0;$trkSaturation.Value=10;$trkSharpenSoften.Value=0;$trkEmboss.Value=0
             $global:isGrayscale = $false; $btnGray.BackColor = "White"; $btnGray.ForeColor = "Black"
             $global:isNegative = $false; $btnNeg.BackColor = "White"; $btnNeg.ForeColor = "Black"
             Update-Preview; 
-            $lblStatus.Text = "$([PBTAPv198.TwainScanner]::SelectedSourceName)"
+            $lblStatus.Text = "$([PBTAPv1910.TwainScanner]::SelectedSourceName)"
         }
     } finally { $btnScan.Enabled = $true }
 })
@@ -598,13 +598,13 @@ $rdoGrayAcq.Add_CheckedChanged({ Save-Settings })
 
 $btnSave.Add_Click($ActionSave); $menuSaveImage.Add_Click($ActionSave); $menuExit.Add_Click({ $form.Close() })
 $menuSelectSource.Add_Click({ 
-    $srcs = [PBTAPv198.TwainScanner]::GetSources($NTwainDllPath)
+    $srcs = [PBTAPv1910.TwainScanner]::GetSources($NTwainDllPath)
     $sf = New-Object System.Windows.Forms.Form; $sf.Text = "Select Source"; $sf.Size = "450,420"; $sf.StartPosition = "CenterParent"
     $lb = New-Object System.Windows.Forms.ListBox; $lb.SetBounds(20,40,395,240); foreach($s in $srcs){[void]$lb.Items.Add($s)}
     $sf.Controls.Add($lb); $bo = New-Object System.Windows.Forms.Button; $bo.Text = "Select"; $bo.DialogResult = "OK"; $bo.SetBounds(300,310,100,40); $sf.Controls.Add($bo)
     if($sf.ShowDialog($form) -eq "OK"){ 
         if ($lb.SelectedItem) {
-            [PBTAPv198.TwainScanner]::SelectedSourceName = $lb.SelectedItem.ToString(); $lblStatus.Text = $lb.SelectedItem.ToString(); Save-Settings 
+            [PBTAPv1910.TwainScanner]::SelectedSourceName = $lb.SelectedItem.ToString(); $lblStatus.Text = $lb.SelectedItem.ToString(); Save-Settings 
         }
     }
 })
@@ -686,7 +686,7 @@ $menuManual.Add_Click({
 $menuAbout.Add_Click({ 
     $aboutForm = New-Object System.Windows.Forms.Form
     $aboutForm.Text = "About PBTAP"
-    $aboutForm.Size = New-Object System.Drawing.Size(480, 320)
+    $aboutForm.Size = New-Object System.Drawing.Size(480, 420)
     $aboutForm.StartPosition = "CenterParent"
     $aboutForm.FormBorderStyle = "FixedDialog"
     $aboutForm.MaximizeBox = $false
@@ -702,39 +702,45 @@ $menuAbout.Add_Click({
     $lblVer = New-Object System.Windows.Forms.Label
     $lblVer.Text = "Version $AppVersion ($ProcArch)"
     $lblVer.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-    $lblVer.SetBounds(20, 75, 420, 25)
+    $lblVer.SetBounds(20, 80, 420, 25)
     $lblVer.TextAlign = "TopCenter"
 
     $lblAuthor = New-Object System.Windows.Forms.Label
     $lblAuthor.Text = "Created by $($global:AppMetrics)"
     $lblAuthor.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-    $lblAuthor.SetBounds(20, 100, 420, 25)
+    $lblAuthor.SetBounds(20, 110, 420, 25)
     $lblAuthor.TextAlign = "TopCenter"
 
     $lnkGithub = New-Object System.Windows.Forms.LinkLabel
     $lnkGithub.Text = "PBTAP GitHub Repository"
-    $lnkGithub.SetBounds(20, 125, 420, 25)
+    $lnkGithub.SetBounds(20, 140, 420, 25)
     $lnkGithub.TextAlign = "TopCenter"
     $lnkGithub.Add_LinkClicked({ Start-Process "https://github.com/joshdwight101" })
 
     $lblNTwain = New-Object System.Windows.Forms.Label
     $lblNTwain.Text = "Powered by NTwain (v3) integration"
     $lblNTwain.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Italic)
-    $lblNTwain.SetBounds(20, 160, 420, 25)
+    $lblNTwain.SetBounds(20, 190, 420, 25)
     $lblNTwain.TextAlign = "TopCenter"
 
     $lnkNTwain = New-Object System.Windows.Forms.LinkLabel
     $lnkNTwain.Text = "NTwain Project on GitHub"
-    $lnkNTwain.SetBounds(20, 180, 420, 25)
+    $lnkNTwain.SetBounds(20, 215, 420, 20)
     $lnkNTwain.TextAlign = "TopCenter"
     $lnkNTwain.Add_LinkClicked({ Start-Process "https://github.com/soukoku/ntwain" })
 
+    $lnkNuGet = New-Object System.Windows.Forms.LinkLabel
+    $lnkNuGet.Text = "NTwain on NuGet"
+    $lnkNuGet.SetBounds(20, 240, 420, 25)
+    $lnkNuGet.TextAlign = "TopCenter"
+    $lnkNuGet.Add_LinkClicked({ Start-Process "https://www.nuget.org/packages/NTwain/" })
+
     $btnOk = New-Object System.Windows.Forms.Button
     $btnOk.Text = "OK"
-    $btnOk.SetBounds(190, 230, 80, 30)
+    $btnOk.SetBounds(190, 285, 80, 35)
     $btnOk.DialogResult = "OK"
 
-    $aboutForm.Controls.AddRange(@($lblTitle, $lblVer, $lblAuthor, $lnkGithub, $lblNTwain, $lnkNTwain, $btnOk))
+    $aboutForm.Controls.AddRange(@($lblTitle, $lblVer, $lblAuthor, $lnkGithub, $lblNTwain, $lnkNTwain, $lnkNuGet, $btnOk))
     $aboutForm.ShowDialog($form) | Out-Null
 })
 
